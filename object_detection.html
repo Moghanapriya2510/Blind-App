@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Object Detection</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: black;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        #video {
+            border: 1px solid white;
+        }
+    </style>
+</head>
+<body>
+    <h1>Live Object Detection</h1>
+    <video id="video" width="640" height="480" autoplay></video>
+    <script>
+        const video = document.getElementById('video');
+
+        // Access webcam and display the stream
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+                video.play();
+            })
+            .catch(err => {
+                console.error("Error accessing webcam: ", err);
+            });
+
+        // Send video frame to server for object detection
+        async function sendFrame() {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = canvas.toDataURL('image/jpeg');
+
+            try {
+                const response = await fetch('/detect_objects', {
+                    method: 'POST',
+                    body: JSON.stringify({ image: imageData }),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const detectedObjects = await response.json();
+                console.log('Detected Objects:', detectedObjects);
+
+            } catch (error) {
+                console.error('Error sending frame to server:', error);
+            }
+
+            requestAnimationFrame(sendFrame); // Continue sending frames
+        }
+
+        // Start sending frames
+        sendFrame();
+    </script>
+</body>
+</html>
